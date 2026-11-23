@@ -11,44 +11,39 @@ import random
 import json
 
 
-def apply_corruption(img_path, output_path, severity):
+def apply_corruption(img_path, output_path, severity, img_index):
     """
     Применяет синтетические искажения к изображению.
     severity: 0 (Clean), 1 (Medium), 2 (High)
+    img_index: индекс изображения для уникального seed
     """
     img = cv2.imread(str(img_path))
     if img is None:
         return False
     
     h, w = img.shape[:2]
-    rng = np.random.default_rng(42)  # Фиксированный seed для воспроизводимости
+    # Уникальный seed для каждого изображения
+    rng = np.random.default_rng(42 + img_index)
     
     if severity == 1:  # Medium
-        # 1. Размытие
         img = cv2.GaussianBlur(img, (5, 5), 1.5)
-        # 2. Легкая полигональная окклюзия (1-2 полигона, 20-40% площади)
         for _ in range(rng.integers(1, 3)):
             pts = rng.integers(0, min(h, w), size=(rng.integers(4, 7), 2))
             hull = cv2.convexHull(pts)
-            # Явное преобразование numpy.int64 -> Python int
             color = (int(rng.integers(50, 150)),
                      int(rng.integers(50, 150)),
                      int(rng.integers(50, 150)))
             cv2.fillPoly(img, [hull], color)
             
     elif severity == 2:  # High
-        # 1. Сильное размытие
         img = cv2.GaussianBlur(img, (9, 9), 3.0)
-        # 2. Сильная полигональная окклюзия (2-4 полигона, 40-70% площади)
         for _ in range(rng.integers(2, 5)):
             pts = rng.integers(0, min(h, w), size=(rng.integers(5, 10), 2))
             hull = cv2.convexHull(pts)
-            # Явное преобразование numpy.int64 -> Python int
             color = (int(rng.integers(30, 100)),
                      int(rng.integers(30, 100)),
                      int(rng.integers(30, 100)))
             cv2.fillPoly(img, [hull], color)
-        # 3. Перспективное искажение
         max_offset = int(min(w, h) * 0.1)
         src_pts = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
         dst_pts = src_pts + rng.integers(-max_offset, max_offset, size=src_pts.shape).astype(np.float32)
@@ -123,9 +118,9 @@ def evaluate_stratified():
         
         # Применяем искажения к изображениям
         print("  Применение искажений к тестовым изображениям...")
-        for img_file in test_images_dir.glob("*.jpg"):
+        for idx, img_file in enumerate(sorted(test_images_dir.glob("*.jpg"))):
             out_path = temp_images_dir / img_file.name
-            apply_corruption(img_file, out_path, severity)
+            apply_corruption(img_file, out_path, severity, idx)
         
         # Создаем временный data.yaml для этого уровня
         temp_data_yaml = temp_test_dir / "data.yaml"
@@ -146,6 +141,10 @@ def evaluate_stratified():
             verbose=False,
             plots=False
         )
+
+        # Отладка: выводим сырые метрики
+        print(f"  Сырые метрики: map50={metrics.box.map50}, map={metrics.box.map}, r={metrics.box.r}")
+        print(f"  Типы: map50={type(metrics.box.map50)}, map={type(metrics.box.map)}, r={type(metrics.box.r)}")
         
         # === БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ МЕТРИК ===
         # Используем только универсальную функцию get_scalar

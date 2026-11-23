@@ -1,5 +1,5 @@
 """
-Стратифицированная оценка робастности PROPOSED модели.
+Стратифицированная оценка робастности PROPOSED модели (с исправленным seed).
 """
 import os
 import shutil
@@ -9,15 +9,16 @@ from pathlib import Path
 from ultralytics import YOLO
 import json
 
-def apply_corruption(img_path, output_path, severity):
+def apply_corruption(img_path, output_path, severity, img_index):
     img = cv2.imread(str(img_path))
     if img is None:
         return False
     
     h, w = img.shape[:2]
-    rng = np.random.default_rng(42)
+    # ИСПРАВЛЕНИЕ: Уникальный seed для каждого изображения
+    rng = np.random.default_rng(42 + img_index)
     
-    if severity == 1:  # Medium
+    if severity == 1:
         img = cv2.GaussianBlur(img, (5, 5), 1.5)
         for _ in range(rng.integers(1, 3)):
             pts = rng.integers(0, min(h, w), size=(rng.integers(4, 7), 2))
@@ -25,7 +26,7 @@ def apply_corruption(img_path, output_path, severity):
             color = (int(rng.integers(50, 150)), int(rng.integers(50, 150)), int(rng.integers(50, 150)))
             cv2.fillPoly(img, [hull], color)
             
-    elif severity == 2:  # High
+    elif severity == 2:
         img = cv2.GaussianBlur(img, (9, 9), 3.0)
         for _ in range(rng.integers(2, 5)):
             pts = rng.integers(0, min(h, w), size=(rng.integers(5, 10), 2))
@@ -52,11 +53,11 @@ def get_scalar(val):
         return 0.0
 
 def evaluate_proposed():
-    print("="*70)
+    print("=" * 70)
     print("СТРАТИФИЦИРОВАННАЯ ОЦЕНКА ROBUSTNESS (PROPOSED)")
-    print("="*70)
+    print("=" * 70)
     
-    # !!! ИЗМЕНЕН ПУТЬ К МОДЕЛИ !!!
+    # УКАЗЫВАЕМ ВЕСА PROPOSED
     model_path = "results/pilot/proposed/weights/best.pt"
     test_images_dir = Path("data/processed/gtsdb_yolo/test/images")
     test_labels_dir = Path("data/processed/gtsdb_yolo/test/labels")
@@ -89,9 +90,10 @@ def evaluate_proposed():
             shutil.copy(label_file, temp_labels_dir / label_file.name)
         
         print("  Применение искажений к тестовым изображениям...")
-        for img_file in test_images_dir.glob("*.jpg"):
+        # ИСПРАВЛЕНИЕ: передаем индекс изображения
+        for idx, img_file in enumerate(sorted(test_images_dir.glob("*.jpg"))):
             out_path = temp_images_dir / img_file.name
-            apply_corruption(img_file, out_path, severity)
+            apply_corruption(img_file, out_path, severity, idx)
         
         temp_data_yaml = temp_test_dir / "data.yaml"
         with open(temp_data_yaml, 'w') as f:
@@ -126,14 +128,14 @@ def evaluate_proposed():
         
         shutil.rmtree(temp_test_dir)
     
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("СВОДНАЯ ТАБЛИЦА РЕЗУЛЬТАТОВ (PROPOSED)")
-    print("="*70)
+    print("=" * 70)
     print(f"{'Уровень искажений':<30} | {'mAP50':<8} | {'mAP50-95':<8} | {'Recall':<8}")
     print("-" * 70)
     for res in results_summary:
         print(f"{res['Level']:<30} | {res['mAP50']:<8.4f} | {res['mAP50-95']:<8.4f} | {res['Recall']:<8.4f}")
-    print("="*70)
+    print("=" * 70)
     
     results_dir = Path("results/pilot/proposed")
     results_dir.mkdir(parents=True, exist_ok=True)
