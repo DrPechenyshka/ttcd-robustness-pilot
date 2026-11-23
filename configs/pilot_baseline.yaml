@@ -1,0 +1,100 @@
+# Baseline: стандартные аугментации YOLOv8
+task: detect
+mode: train
+model: yolov8m.pt
+project: results/pilot
+name: baseline
+
+# Данные
+data: data/processed/gtsdb_yolo/data.yaml
+imgsz: 640
+batch: 8
+workers: 2
+
+# Обучение
+epochs: 30
+patience: 10
+seed: 42
+device: 0
+amp: true
+
+# Стандартные аугментации YOLOv8
+hsv_h: 0.015
+hsv_s: 0.7
+hsv_v: 0.4
+degrees: 0.0
+translate: 0.1
+scale: 0.5
+shear: 0.0
+perspective: 0.0
+flipud: 0.0
+fliplr: 0.5
+mosaic: 1.0
+mixup: 0.0
+copy_paste: 0.0
+
+# Оптимизатор
+optimizer: auto
+lr0: 0.01
+lrf: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3.0
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+
+# Логирование
+exist_ok: true
+verbose: true
+EOF
+
+# Proposed config
+cat > configs/pilot_proposed.yaml << 'EOF'
+# Proposed: усиленные геометрические аугментации
+task: detect
+mode: train
+model: yolov8m.pt
+project: results/pilot
+name: proposed
+
+# Данные
+data: data/processed/gtsdb_yolo/data.yaml
+imgsz: 640
+batch: 8
+workers: 2
+
+# Обучение
+epochs: 30
+patience: 10
+seed: 42
+device: 0
+amp: true
+
+# Усиленные аугментации
+hsv_h: 0.015
+hsv_s: 0.7
+hsv_v: 0.4
+degrees: 10.0
+translate: 0.2
+scale: 0.7
+shear: 5.0
+perspective: 0.001
+flipud: 0.0
+fliplr: 0.5
+mosaic: 1.0
+mixup: 0.1
+copy_paste: 0.1
+
+# Оптимизатор
+optimizer: auto
+lr0: 0.01
+lrf: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3.0
+warmup_momentum: 0.8
+warmup_bias_lr: 0.1
+
+# Логирование
+exist_ok: true
+verbose: true

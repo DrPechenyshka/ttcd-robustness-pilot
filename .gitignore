@@ -1,0 +1,34 @@
+# Данные (не коммитим — слишком большие)
+data/raw/
+data/processed/gtsdb_yolo/
+data/processed/temp_test_*/
+
+# Веса моделей
+results/pilot/*/weights/*.pt
+results/main/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# W&B / tensorboard
+wandb/
+runs/
+
+# Кэш
+*.cache
+labels.cache
